@@ -6,6 +6,10 @@
 #include <functional>
 #include <map>
 #include <algorithm>
+#include <set>
+#include <d3d12.h>
+#include <wrl.h>
+#include <guiddef.h>
 using namespace std;
 
 
@@ -67,5 +71,57 @@ struct HeadlessImpl {
 	const std::string wd = "-WD";
 };
 
+struct Allocation {
+	Allocation(UINT64 _offset, UINT64 _size) :
+		offset(_offset), size(_size) {}
+	Allocation(UINT64 _offset) :
+		offset(_offset), size(0){}
+
+	UINT64 offset;
+	UINT64 size;
+
+	bool operator<(const Allocation& allocation)const {
+		if (this->size != 0 && allocation.size != 0) // both a and b are full allocation 
+			return this->offset < allocation.offset;
+		// std::set depends on stick lessthen; a is full allocation, b is a place in some allocation
+		// b allocation's size equal to zero, but has a place in the form of "offset"
+		//-----------------b1--------------b2-----------------b3----------
+		//---------------------||aaaaaaaaaaaaaaaaaaaaa||----------------
+		//---------------------||--this is the full alloc a--||----------------
+		// when a compared with b, return aOffset+aSize < bOffset
+		// when b compared with a, return bOffset < aOffset
+		/*OffsetType aOffset = this->size != 0 ? this->offset : allocation.offset;
+		SizeType aSize = this->size != 0 ? this->size : allocation.size;
+		OffsetType bOffset */
+		if (this->size != 0) {//this is a, a compared with b
+			return this->offset + this->size-1 < allocation.offset;
+		}
+		else {//this is b, b compared with a 
+			return this->offset < allocation.offset;
+		}
+
+	}
+};
+
 int main(int argc, char* argv[]) {
+
+	std::vector<int> vec(4);
+	vec[0] = 99; vec[1] = 99;
+	vec[2] = 97;
+	vec[3] = 95;
+	vec.resize(1);
+	vec.resize(10);
+
+	std::cout<<"----------------------------------" << std::endl;
+	//std::set<Allocation> allocations;
+
+	//allocations.emplace(Allocation(0, 16));
+	//allocations.emplace(Allocation(16, 16));
+
+	//for (auto it = allocations.begin(); it != allocations.end(); it++) {
+	//	printf("%d--%d\n", it->offset, it->size);
+	//}
+	//printf("------------------------------\n");
+	//auto it = allocations.find(Allocation(16));
+	//printf("%d, %d\n", it->offset, it->size);
 }
